@@ -108,14 +108,12 @@ router.post('/', async (req, res) => {
       }
     });
 
-    // Add exercises if provided
     if (exercises && exercises.length > 0) {
       for (const exerciseData of exercises) {
         let exercise = await req.prisma.exercise.findUnique({
           where: { name: exerciseData.name }
         });
 
-        // Create exercise if it doesn't exist
         if (!exercise) {
           exercise = await req.prisma.exercise.create({
             data: {
@@ -127,7 +125,6 @@ router.post('/', async (req, res) => {
           });
         }
 
-        // Link exercise to workout
         await req.prisma.workoutExercise.create({
           data: {
             workoutId: workout.id,
