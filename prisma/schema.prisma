@@ -1,0 +1,278 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String             @id @default(uuid())
+  email             String             @unique
+  password          String
+  fullName          String?
+  gender            Gender?
+  birthDate         DateTime?
+  height            Float?
+  weight            Float?
+  activityLevel     ActivityLevel?
+  goal              Goal?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  dietarySettings   DietarySetting?
+  exerciseSettings  ExerciseSetting?
+  notificationSettings NotificationSetting?
+  preferences       UserPreference?
+  meals             Meal[]
+  workouts          Workout[]
+  medicalConditions UserMedicalCondition[]
+  foodAllergies     UserFoodAllergy[]
+  progressTracking  ProgressTracking[]
+}
+
+model DietarySetting {
+  id              String           @id @default(uuid())
+  userId          String           @unique
+  dietType        DietType?
+  mealsPerDay     Int              @default(3)
+  calorieGoal     Int?
+  preferredDiet   PreferredDiet?
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ExerciseSetting {
+  id                String           @id @default(uuid())
+  userId            String           @unique
+  preferredExercises ExerciseType[]
+  workoutDaysPerWeek Int             @default(3)
+  fitnessLevel      FitnessLevel?
+  exerciseGoals     ExerciseGoal[]
+  trackPerformance  Boolean          @default(true)
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model NotificationSetting {
+  id                String           @id @default(uuid())
+  userId            String           @unique
+  mealReminders     Boolean          @default(true)
+  exerciseReminders Boolean          @default(true)
+  waterReminders    Boolean          @default(true)
+  customReminderTime DateTime?
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserPreference {
+  id              String           @id @default(uuid())
+  userId          String           @unique
+  darkMode        Boolean          @default(false)
+  language        Language         @default(ARABIC)
+  measurementUnit MeasurementUnit  @default(METRIC)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MedicalCondition {
+  id              String               @id @default(uuid())
+  name            String               @unique
+  description     String?
+  users           UserMedicalCondition[]
+}
+
+model UserMedicalCondition {
+  id                  String           @id @default(uuid())
+  userId              String
+  medicalConditionId  String
+  notes               String?
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medicalCondition    MedicalCondition @relation(fields: [medicalConditionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, medicalConditionId])
+}
+
+model FoodAllergy {
+  id              String           @id @default(uuid())
+  name            String           @unique
+  description     String?
+  users           UserFoodAllergy[]
+}
+
+model UserFoodAllergy {
+  id              String           @id @default(uuid())
+  userId          String
+  foodAllergyId   String
+  severity        AllergySeverity  @default(MODERATE)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  foodAllergy     FoodAllergy      @relation(fields: [foodAllergyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, foodAllergyId])
+}
+
+model Meal {
+  id              String           @id @default(uuid())
+  userId          String
+  name            String
+  description     String?
+  calories        Int?
+  protein         Float?
+  carbs           Float?
+  fat             Float?
+  mealType        MealType
+  timeConsumed    DateTime?
+  date            DateTime         @default(now())
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Workout {
+  id              String           @id @default(uuid())
+  userId          String
+  name            String
+  description     String?
+  duration        Int              // in minutes
+  caloriesBurned  Int?
+  workoutType     ExerciseType
+  date            DateTime         @default(now())
+  completed       Boolean          @default(false)
+  exercises       WorkoutExercise[]
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Exercise {
+  id              String           @id @default(uuid())
+  name            String           @unique
+  description     String?
+  muscleGroup     MuscleGroup?
+  exerciseType    ExerciseType
+  workouts        WorkoutExercise[]
+}
+
+model WorkoutExercise {
+  id              String           @id @default(uuid())
+  workoutId       String
+  exerciseId      String
+  sets            Int?
+  reps            Int?
+  weight          Float?
+  duration        Int?             // in seconds
+  distance        Float?           // in meters
+  workout         Workout          @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise        Exercise         @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([workoutId, exerciseId])
+}
+
+model ProgressTracking {
+  id              String           @id @default(uuid())
+  userId          String
+  weight          Float?
+  bodyFat         Float?
+  waistCircumference Float?
+  date            DateTime         @default(now())
+  notes           String?
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHTLY_ACTIVE
+  MODERATELY_ACTIVE
+  VERY_ACTIVE
+  EXTREMELY_ACTIVE
+}
+
+enum Goal {
+  WEIGHT_LOSS
+  WEIGHT_GAIN
+  MUSCLE_BUILDING
+  MAINTENANCE
+  FITNESS_IMPROVEMENT
+}
+
+enum DietType {
+  REGULAR
+  VEGETARIAN
+  VEGAN
+  KETO
+  GLUTEN_FREE
+  DAIRY_FREE
+  OTHER
+}
+
+enum PreferredDiet {
+  NONE
+  LOW_CARB
+  HIGH_PROTEIN
+  BALANCED
+  MEDITERRANEAN
+  PALEO
+  OTHER
+}
+
+enum FitnessLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum ExerciseType {
+  CARDIO
+  STRENGTH
+  FLEXIBILITY
+  HIIT
+  YOGA
+  PILATES
+  SWIMMING
+  CYCLING
+  RUNNING
+  WALKING
+  OTHER
+}
+
+enum ExerciseGoal {
+  WEIGHT_LOSS
+  MUSCLE_GAIN
+  ENDURANCE
+  FLEXIBILITY
+  STRENGTH
+  OVERALL_FITNESS
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+  PRE_WORKOUT
+  POST_WORKOUT
+}
+
+enum MuscleGroup {
+  CHEST
+  BACK
+  LEGS
+  SHOULDERS
+  ARMS
+  CORE
+  FULL_BODY
+}
+
+enum Language {
+  ENGLISH
+  ARABIC
+}
+
+enum MeasurementUnit {
+  METRIC
+  IMPERIAL
+}
+
+enum AllergySeverity {
+  MILD
+  MODERATE
+  SEVERE
+}
