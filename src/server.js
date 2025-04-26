@@ -18,7 +18,16 @@ const progressRoutes = require('./routes/progress.routes');
 const { authenticateToken } = require('./middleware/auth.middleware');
 
 const app = express();
-const prisma = new PrismaClient();
+let prisma;
+
+try {
+  prisma = new PrismaClient();
+  console.log('Prisma Client initialized successfully');
+} catch (error) {
+  console.error('Failed to initialize Prisma Client:', error);
+  process.exit(1);
+}
+
 const PORT = process.env.PORT || 5000;
 
 // Swagger definition
