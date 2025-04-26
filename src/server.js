@@ -80,10 +80,10 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'Server is running' });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+//new route root page 
+
+app.get('/', (req, res) => {
+  res.status(200).json({ message: 'Welcome to the VitaTone API' });
 });
 
 app.listen(PORT, () => {
