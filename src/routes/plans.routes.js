@@ -6,12 +6,10 @@ router.get('/', async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Get meal plans
     const meals = await req.prisma.meal.findMany({
       where: { userId }
     });
 
-    // Get workout plans
     const workouts = await req.prisma.workout.findMany({
       where: { userId },
       include: {
@@ -23,7 +21,6 @@ router.get('/', async (req, res) => {
       }
     });
 
-    // Group meals by date
     const mealPlansByDate = meals.reduce((acc, meal) => {
       const dateKey = meal.date.toISOString().split('T')[0];
       if (!acc[dateKey]) {
@@ -33,7 +30,6 @@ router.get('/', async (req, res) => {
       return acc;
     }, {});
 
-    // Group workouts by date
     const workoutPlansByDate = workouts.reduce((acc, workout) => {
       const dateKey = workout.date.toISOString().split('T')[0];
       if (!acc[dateKey]) {
@@ -82,7 +78,6 @@ router.get('/meal-plans', async (req, res) => {
       orderBy: { date: 'asc' }
     });
 
-    // Group meals by date
     const mealPlansByDate = meals.reduce((acc, meal) => {
       const dateKey = meal.date.toISOString().split('T')[0];
       if (!acc[dateKey]) {
@@ -176,7 +171,6 @@ router.post('/generate-meal-plan', async (req, res) => {
     const userId = req.user.id;
     const { goal, dietType, mealsPerDay, date } = req.body;
 
-    // Get user profile data
     const user = await req.prisma.user.findUnique({
       where: { id: userId },
       include: {

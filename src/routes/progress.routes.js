@@ -9,7 +9,6 @@ router.get('/', async (req, res) => {
     
     const whereClause = { userId };
     
-    // Add date range filters if provided
     if (startDate || endDate) {
       whereClause.date = {};
       
@@ -65,7 +64,6 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { weight, bodyFat, waistCircumference, date, notes } = req.body;
     
-    // Check if entry exists and belongs to user
     const existingEntry = await req.prisma.progressTracking.findFirst({
       where: {
         id,
@@ -101,7 +99,6 @@ router.delete('/:id', async (req, res) => {
     const userId = req.user.id;
     const { id } = req.params;
     
-    // Check if entry exists and belongs to user
     const existingEntry = await req.prisma.progressTracking.findFirst({
       where: {
         id,
@@ -129,19 +126,16 @@ router.get('/summary', async (req, res) => {
   try {
     const userId = req.user.id;
     
-    // Get latest progress entry
     const latestEntry = await req.prisma.progressTracking.findFirst({
       where: { userId },
       orderBy: { date: 'desc' }
     });
     
-    // Get first progress entry
     const firstEntry = await req.prisma.progressTracking.findFirst({
       where: { userId },
       orderBy: { date: 'asc' }
     });
     
-    // Calculate differences
     let weightChange = null;
     let bodyFatChange = null;
     let waistChange = null;
@@ -160,7 +154,6 @@ router.get('/summary', async (req, res) => {
       }
     }
     
-    // Get count of workouts in last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
@@ -174,7 +167,6 @@ router.get('/summary', async (req, res) => {
       }
     });
     
-    // Get average calories per day for last 7 days
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     

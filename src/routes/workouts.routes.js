@@ -9,7 +9,6 @@ router.get('/', async (req, res) => {
 
     const whereClause = { userId };
 
-    // Add date filter if provided
     if (date) {
       const startDate = new Date(date);
       startDate.setHours(0, 0, 0, 0);
@@ -23,12 +22,10 @@ router.get('/', async (req, res) => {
       };
     }
 
-    // Add completed filter if provided
     if (completed !== undefined) {
       whereClause.completed = completed === 'true';
     }
 
-    // Add workout type filter if provided
     if (workoutType) {
       whereClause.workoutType = workoutType;
     }
@@ -94,7 +91,6 @@ router.post('/', async (req, res) => {
       workoutType, date, completed, exercises
     } = req.body;
 
-    // Create workout
     const workout = await req.prisma.workout.create({
       data: {
         userId,
@@ -139,7 +135,6 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // Fetch the complete workout with exercises
     const completeWorkout = await req.prisma.workout.findUnique({
       where: { id: workout.id },
       include: {
@@ -169,7 +164,6 @@ router.put('/:id', async (req, res) => {
       workoutType, date, completed, exercises
     } = req.body;
 
-    // Check if workout exists and belongs to user
     const existingWorkout = await req.prisma.workout.findFirst({
       where: {
         id,
@@ -181,7 +175,6 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Workout not found' });
     }
 
-    // Update workout
     const updatedWorkout = await req.prisma.workout.update({
       where: { id },
       data: {
@@ -195,20 +188,17 @@ router.put('/:id', async (req, res) => {
       }
     });
 
-    // Update exercises if provided
     if (exercises && exercises.length > 0) {
-      // Remove existing exercises
+
       await req.prisma.workoutExercise.deleteMany({
         where: { workoutId: id }
       });
 
-      // Add new exercises
       for (const exerciseData of exercises) {
         let exercise = await req.prisma.exercise.findUnique({
           where: { name: exerciseData.name }
         });
 
-        // Create exercise if it doesn't exist
         if (!exercise) {
           exercise = await req.prisma.exercise.create({
             data: {
@@ -220,7 +210,6 @@ router.put('/:id', async (req, res) => {
           });
         }
 
-        // Link exercise to workout
         await req.prisma.workoutExercise.create({
           data: {
             workoutId: id,
@@ -235,7 +224,6 @@ router.put('/:id', async (req, res) => {
       }
     }
 
-    // Fetch the complete workout with exercises
     const completeWorkout = await req.prisma.workout.findUnique({
       where: { id },
       include: {

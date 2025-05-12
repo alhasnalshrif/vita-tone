@@ -9,7 +9,6 @@ router.get('/', async (req, res) => {
 
     const whereClause = { userId };
 
-    // Add date filter if provided
     if (date) {
       const startDate = new Date(date);
       startDate.setHours(0, 0, 0, 0);
@@ -23,7 +22,6 @@ router.get('/', async (req, res) => {
       };
     }
 
-    // Add meal type filter if provided
     if (mealType) {
       whereClause.mealType = mealType;
     }
@@ -108,7 +106,6 @@ router.put('/:id', async (req, res) => {
       carbs, fat, mealType, timeConsumed, date
     } = req.body;
 
-    // Check if meal exists and belongs to user
     const existingMeal = await req.prisma.meal.findFirst({
       where: {
         id,
@@ -149,7 +146,6 @@ router.delete('/:id', async (req, res) => {
     const userId = req.user.id;
     const { id } = req.params;
 
-    // Check if meal exists and belongs to user
     const existingMeal = await req.prisma.meal.findFirst({
       where: {
         id,
