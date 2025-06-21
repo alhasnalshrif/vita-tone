@@ -108,6 +108,22 @@ const userSchema = new mongoose.Schema({
     active_plan_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'HealthPlan'
+    },
+
+    // Display Settings
+    theme: {
+        type: String,
+        enum: ['light', 'dark'],
+        default: 'light'
+    },
+    language: {
+        type: String,
+        default: 'en'
+    },
+    unit_system: {
+        type: String,
+        enum: ['metric', 'imperial'],
+        default: 'metric'
     }
 }, {
     timestamps: true
@@ -148,7 +164,10 @@ userSchema.methods.getProfileData = function () {
         health_conditions: this.health_conditions,
         chronic_conditions: this.chronic_conditions,
         last_login: this.last_login,
-        active_plan_id: this.active_plan_id
+        active_plan_id: this.active_plan_id,
+        theme: this.theme,
+        language: this.language,
+        unit_system: this.unit_system
     };
 };
 

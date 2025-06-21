@@ -39,7 +39,7 @@ router.post('/generate-plan', checkApiKey, async (req, res) => {
         if (numberMatch) {
           return parseInt(numberMatch[1]);
         }
-        
+
         // Handle word numbers like "four_meals"
         const wordNumbers = {
           'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
@@ -51,7 +51,7 @@ router.post('/generate-plan', checkApiKey, async (req, res) => {
             return num;
           }
         }
-        
+
         // Try direct parsing
         const parsed = parseInt(value);
         return isNaN(parsed) ? fallback : parsed;
@@ -77,7 +77,8 @@ router.post('/generate-plan', checkApiKey, async (req, res) => {
     let user;
     if (email) {
       user = await User.findOne({ email: email.toLowerCase() });
-      if (!user) {        user = new User({
+      if (!user) {
+        user = new User({
           full_name,
           email: email.toLowerCase(),
           password: 'temp_password', // This should be properly hashed in a real app
@@ -102,7 +103,8 @@ router.post('/generate-plan', checkApiKey, async (req, res) => {
           chronic_conditions: chronicConditionsArray
         });
         await user.save();
-        console.log(`✅ Created new user: ${full_name}`);      } else {
+        console.log(`✅ Created new user: ${full_name}`);
+      } else {
         // Update existing user data
         Object.assign(user, {
           full_name,
@@ -182,7 +184,7 @@ IMPORTANT: Create exactly 7 days of content. Return the response as a JSON array
   "exercise": ["exercise 1", "exercise 2", "exercise 3"]
 }
 
-Return ONLY the JSON array, no other text or formatting.`;    const response = await axios.post(`${GEMINI_API_URL}?key=${process.env.GEMINI_API_KEY}`, {
+Return ONLY the JSON array, no other text or formatting.`; const response = await axios.post(`${GEMINI_API_URL}?key=${process.env.GEMINI_API_KEY}`, {
       contents: [
         {
           parts: [
@@ -305,7 +307,7 @@ Return ONLY the JSON array, no other text or formatting.`;    const response = a
         });
 
         savedPlan = await healthPlan.save();
-        
+
         // Update user's active plan
         user.active_plan_id = savedPlan._id;
         await user.save();
@@ -458,9 +460,9 @@ router.post('/workout-routine', checkApiKey, async (req, res) => {
 router.get('/user-plan/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    
+
     const activePlan = await HealthPlan.getActivePlan(userId);
-    
+
     if (!activePlan) {
       return res.status(404).json({
         error: 'No active plan found',
@@ -503,9 +505,9 @@ router.get('/user-plan/:userId', async (req, res) => {
 router.get('/todays-plan/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    
+
     const activePlan = await HealthPlan.getActivePlan(userId);
-    
+
     if (!activePlan) {
       return res.status(404).json({
         error: 'No active plan found',
@@ -514,7 +516,7 @@ router.get('/todays-plan/:userId', async (req, res) => {
     }
 
     const todaysPlan = activePlan.getTodaysPlan();
-    
+
     res.json({
       success: true,
       today: todaysPlan,
@@ -539,17 +541,17 @@ router.get('/plan-history/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { page = 1, limit = 10 } = req.query;
-    
+
     const skip = (page - 1) * limit;
-    
+
     const plans = await HealthPlan.find({ user_id: userId })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
       .select('plan_name overall_goal status start_date end_date estimated_duration rating createdAt');
-    
+
     const totalPlans = await HealthPlan.countDocuments({ user_id: userId });
-    
+
     res.json({
       success: true,
       plans: plans.map(plan => plan.getSummary()),
@@ -574,7 +576,7 @@ router.patch('/plan-status/:planId', async (req, res) => {
   try {
     const { planId } = req.params;
     const { status, rating, notes } = req.body;
-    
+
     const validStatuses = ['active', 'completed', 'paused', 'cancelled'];
     if (status && !validStatuses.includes(status)) {
       return res.status(400).json({
@@ -582,25 +584,25 @@ router.patch('/plan-status/:planId', async (req, res) => {
         message: 'Status must be one of: active, completed, paused, cancelled'
       });
     }
-    
+
     const updateData = {};
     if (status) updateData.status = status;
     if (rating) updateData.rating = rating;
     if (status === 'completed') updateData.end_date = new Date();
-    
+
     const plan = await HealthPlan.findByIdAndUpdate(
       planId,
       updateData,
       { new: true, runValidators: true }
     );
-    
+
     if (!plan) {
       return res.status(404).json({
         error: 'Plan not found',
         message: 'Health plan not found'
       });
     }
-    
+
     // Add user notes if provided
     if (notes) {
       plan.user_notes.push({
@@ -609,7 +611,7 @@ router.patch('/plan-status/:planId', async (req, res) => {
       });
       await plan.save();
     }
-    
+
     res.json({
       success: true,
       plan: plan.getSummary(),
@@ -642,13 +644,13 @@ router.post('/track-activity', async (req, res) => {
       challenges,
       achievements
     } = req.body;
-    
+
     // Check if activity already exists for this date
     const existingActivity = await UserActivity.findOne({
       user_id,
       date: new Date(date)
     });
-    
+
     if (existingActivity) {
       // Update existing activity
       Object.assign(existingActivity, {
@@ -663,9 +665,9 @@ router.post('/track-activity', async (req, res) => {
         challenges: challenges || existingActivity.challenges,
         achievements: achievements || existingActivity.achievements
       });
-      
+
       await existingActivity.save();
-      
+
       res.json({
         success: true,
         activity: existingActivity.getDailySummary(),
@@ -688,9 +690,9 @@ router.post('/track-activity', async (req, res) => {
         challenges,
         achievements
       });
-      
+
       await activity.save();
-      
+
       res.json({
         success: true,
         activity: activity.getDailySummary(),
@@ -711,7 +713,7 @@ router.get('/weekly-progress/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { startDate } = req.query;
-    
+
     const start = startDate ? new Date(startDate) : new Date();
     if (!startDate) {
       // Default to start of current week (Monday)
@@ -720,14 +722,14 @@ router.get('/weekly-progress/:userId', async (req, res) => {
       start.setDate(diff);
       start.setHours(0, 0, 0, 0);
     }
-    
+
     const activities = await UserActivity.getWeeklyProgress(userId, start);
-    
+
     // Calculate weekly summary
     const summary = {
       total_days: activities.length,
       completed_days: activities.filter(a => a.day_completed).length,
-      average_completion: activities.length > 0 
+      average_completion: activities.length > 0
         ? Math.round(activities.reduce((sum, a) => sum + a.completion_percentage, 0) / activities.length)
         : 0,
       total_water_intake: activities.reduce((sum, a) => sum + (a.water_intake || 0), 0),
@@ -740,14 +742,14 @@ router.get('/weekly-progress/:userId', async (req, res) => {
         level: a.energy_level
       })).filter(e => e.level)
     };
-    
+
     // Calculate mood distribution
     activities.forEach(activity => {
       if (activity.mood) {
         summary.mood_distribution[activity.mood] = (summary.mood_distribution[activity.mood] || 0) + 1;
       }
     });
-    
+
     res.json({
       success: true,
       week_start: start,

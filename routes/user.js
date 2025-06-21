@@ -379,4 +379,213 @@ router.get('/stats', authenticateToken, async (req, res) => {
     }
 });
 
+// Get user settings
+router.get('/settings', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.userId);
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Return user settings data
+        const settings = {
+            personal: {
+                full_name: user.full_name,
+                gender: user.gender,
+                dob: user.dob,
+                current_weight: user.current_weight,
+                goal: user.goal
+            },
+            nutrition: {
+                fav_nutrition_type: user.fav_nutrition_type,
+                food_allergies: user.food_allergies,
+                meals_per_day: user.meals_per_day,
+                diet_preference: user.diet_preference
+            },
+            exercise: {
+                fav_workout: user.fav_workout,
+                workout_goal: user.workout_goal, 
+                exercise_frequency: user.exercise_frequency
+            },            display: {
+                language: user.language || 'en',
+                unit_system: user.unit_system || 'metric'
+            },
+            privacy: {
+                email: user.email
+            }
+        };
+
+        res.json({
+            success: true,
+            settings: settings
+        });
+
+    } catch (error) {
+        console.error('Get user settings error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+});
+
+// Update user settings
+router.put('/settings', authenticateToken, [
+    body('personal.full_name').optional().trim().isLength({ min: 2, max: 100 }),
+    body('personal.gender').optional().isIn(['male', 'female', 'other']),
+    body('personal.dob').optional().isISO8601(),
+    body('personal.current_weight').optional().isFloat({ min: 20, max: 500 }),
+    body('personal.goal').optional().isString(),
+    body('nutrition.fav_nutrition_type').optional().isString(),
+    body('nutrition.food_allergies').optional().isArray(),
+    body('nutrition.meals_per_day').optional().isInt({ min: 1, max: 8 }),
+    body('nutrition.diet_preference').optional().isString(),
+    body('exercise.fav_workout').optional().isString(),
+    body('exercise.workout_goal').optional().isString(),
+    body('exercise.exercise_frequency').optional().isString(),    body('display.language').optional().isString(),
+    body('display.unit_system').optional().isIn(['metric', 'imperial']),
+    body('privacy.password').optional().isLength({ min: 6 })
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors: errors.array()
+            });
+        }
+
+        const user = await User.findById(req.user.userId);
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        const { personal, nutrition, exercise, display, privacy } = req.body;
+
+        // Update personal settings
+        if (personal) {
+            if (personal.full_name) user.full_name = personal.full_name;
+            if (personal.gender) user.gender = personal.gender;
+            if (personal.dob) user.dob = personal.dob;
+            if (personal.current_weight) user.current_weight = personal.current_weight;
+            if (personal.goal) user.goal = personal.goal;
+        }
+
+        // Update nutrition settings
+        if (nutrition) {
+            if (nutrition.fav_nutrition_type) user.fav_nutrition_type = nutrition.fav_nutrition_type;
+            if (nutrition.food_allergies) user.food_allergies = nutrition.food_allergies;
+            if (nutrition.meals_per_day) user.meals_per_day = nutrition.meals_per_day;
+            if (nutrition.diet_preference) user.diet_preference = nutrition.diet_preference;
+        }
+
+        // Update exercise settings
+        if (exercise) {
+            if (exercise.fav_workout) user.fav_workout = exercise.fav_workout;
+            if (exercise.workout_goal) user.workout_goal = exercise.workout_goal;
+            if (exercise.exercise_frequency) user.exercise_frequency = exercise.exercise_frequency;
+        }        // Update display settings (add to user schema if not exists)
+        if (display) {
+            if (display.language) user.language = display.language;
+            if (display.unit_system) user.unit_system = display.unit_system;
+        }
+
+        // Handle password change
+        if (privacy && privacy.password) {
+            const bcrypt = require('bcrypt');
+            const saltRounds = 10;
+            user.password = await bcrypt.hash(privacy.password, saltRounds);
+        }
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: 'Settings updated successfully',
+            settings: {
+                personal: {
+                    full_name: user.full_name,
+                    gender: user.gender,
+                    dob: user.dob,
+                    current_weight: user.current_weight,
+                    goal: user.goal
+                },
+                nutrition: {
+                    fav_nutrition_type: user.fav_nutrition_type,
+                    food_allergies: user.food_allergies,
+                    meals_per_day: user.meals_per_day,
+                    diet_preference: user.diet_preference
+                },
+                exercise: {
+                    fav_workout: user.fav_workout,
+                    workout_goal: user.workout_goal,
+                    exercise_frequency: user.exercise_frequency
+                },                display: {
+                    language: user.language || 'en',
+                    unit_system: user.unit_system || 'metric'
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Update user settings error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+});
+
+// Submit feedback
+router.post('/feedback', authenticateToken, [
+    body('feedback').optional().trim().isLength({ max: 1000 }).withMessage('Feedback must be less than 1000 characters'),
+    body('rating').optional().isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
+    body('category').optional().isIn(['bug', 'feature', 'general', 'support']).withMessage('Invalid feedback category')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors: errors.array()
+            });
+        }
+
+        const { feedback, rating, category } = req.body;
+        const userId = req.user.userId;
+
+        // In a real app, you would save this to a feedback collection
+        // For now, we'll just log it and return success
+        console.log('User Feedback:', {
+            userId,
+            feedback,
+            rating,
+            category,
+            timestamp: new Date()
+        });
+
+        res.json({
+            success: true,
+            message: 'Thank you for your feedback!'
+        });
+
+    } catch (error) {
+        console.error('Submit feedback error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+});
+
 module.exports = router;
