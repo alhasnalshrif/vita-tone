@@ -355,6 +355,6 @@ For support, please contact:
 ---
 
 <div align="center">
-  <p>Built with ❤️ by the Vita Tone Team</p>
+  <p>Built with ❤️ by Alhasn Alshrif</p>
   <p>© 2025 Vita Tone. All rights reserved.</p>
 </div>
