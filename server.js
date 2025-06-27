@@ -20,32 +20,26 @@ const { ensureConnection } = require('./middleware/database');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Connect to database
 async function initializeDatabase() {
   try {
-    // In serverless environments, we don't maintain persistent connections
-    // Instead, we'll connect on-demand per request
+
     if (process.env.NODE_ENV === 'production' && process.env.VERCEL) {
       console.log('🚀 Database configured for serverless environment');
       return;
     }
     
-    // For local development, establish connection
     await database.connect();
     console.log('🚀 Database initialization completed');
   } catch (error) {
     console.error('❌ Database initialization failed:', error);
-    // Don't exit in serverless environments
     if (!(process.env.NODE_ENV === 'production' && process.env.VERCEL)) {
       process.exit(1);
     }
   }
 }
 
-// Logging middleware
 app.use(morgan('combined'));
 
-// Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -59,10 +53,9 @@ app.use(helmet({
 
 
 
-// Stricter rate limiting for AI endpoints
 const aiLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 20, // limit each IP to 20 AI requests per 5 minutes
+  windowMs: 5 * 60 * 1000, 
+  max: 20, 
   message: {
     error: 'Too many AI requests',
     message: 'Please wait before making more AI requests.',
@@ -70,18 +63,14 @@ const aiLimiter = rateLimit({
   }
 });
 
-// CORS configuration - Allow file:// origins and common dev servers
 const corsOptions = {
   origin: function (origin, callback) {
     console.log('CORS request from origin:', origin);
     
-    // Allow requests with no origin (like mobile apps, curl, Postman, file://)
     if (!origin) return callback(null, true);
 
-    // Allow file:// protocol for local HTML files
     if (origin && origin.startsWith('file://')) return callback(null, true);
 
-    // Allow common development origins
     const allowedOrigins =  [
       "*",
       'https://vita-app.online',
@@ -93,19 +82,17 @@ const corsOptions = {
       'http://127.0.0.1:8080',
       'http://127.0.0.1:8000',
       'http://127.0.0.1:3000',
-      'null' // Allow null origin for file:// protocol
+      'null'
     ];
 
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
 
-    // For development, allow all localhost and 127.0.0.1 origins
     if (process.env.NODE_ENV === 'development') {
       if (origin && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
         return callback(null, true);
       }
-      // In development mode, be very permissive
       return callback(null, true);
     }
 
@@ -120,84 +107,23 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve static files from the parent directory (where HTML files are)
 app.use(express.static(path.join(__dirname, '..')));
 
-// API Routes with database connection middleware
-app.use('/api/auth', ensureConnection, authRoutes);
-app.use('/api/user', ensureConnection, userRoutes);
-app.use('/api/gemini', aiLimiter, geminiRoutes);
-app.use('/api/health', ensureConnection, healthRoutes);
+app.use('/project/api/auth', ensureConnection, authRoutes);
+app.use('/project/api/user', ensureConnection, userRoutes);
+app.use('/project/api/gemini', aiLimiter, geminiRoutes);
+app.use('/project/api/health', ensureConnection, healthRoutes);
 
-// Root route - serve index.html
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
 
-// API info route
-app.get('/api', (req, res) => {
-  res.json({
-    message: 'Vita Tone API Server',
-    version: '1.0.0',
-    status: 'OK',
-    timestamp: new Date().toISOString(), endpoints: {
-      auth: '/api/auth/*',
-      user: '/api/user/*',
-      gemini: '/api/gemini/*',
-      health: '/api/health/*',
-      status: '/api/status',
-      dbStatus: '/api/db-status'
-    }
-  });
-});
-
-// Health check endpoint
-app.get('/api/status', (req, res) => {
-  res.json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0',
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
-
-// Database health check endpoint
-app.get('/api/db-status', async (req, res) => {
-  try {
-    await database.ensureConnection();
-    const isConnected = database.isConnected();
-    
-    res.json({
-      status: isConnected ? 'OK' : 'DISCONNECTED',
-      database: {
-        connected: isConnected,
-        readyState: require('mongoose').connection.readyState,
-        host: require('mongoose').connection.host,
-        name: require('mongoose').connection.name
-      },
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    res.status(503).json({
-      status: 'ERROR',
-      database: {
-        connected: false,
-        error: error.message
-      },
-      timestamp: new Date().toISOString()
-    });
-  }
-});
 
 
 
-// Error handling middleware
 app.use(notFoundHandler);
 app.use(errorHandler);
 
