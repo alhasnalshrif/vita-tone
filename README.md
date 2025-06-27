@@ -335,14 +335,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Express.js** community for excellent web framework
 - **Node.js** community for the runtime environment
 
-## 📞 Support
-
-For support, please contact:
-
-- **Email**: <support@vitatone.com>
-- **GitHub Issues**: [Create an issue](https://github.com/yourusername/vita-tone/issues)
-- **Documentation**: [Wiki](https://github.com/yourusername/vita-tone/wiki)
-
 ## 🚦 Project Status
 
 - ✅ **Core Features**: Complete
