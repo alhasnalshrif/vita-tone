@@ -2,7 +2,7 @@
 module.exports = {  // Database configuration
   database: {
     mongodb: {
-      uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/vitatone',
+      uri: process.env.MONGODB_URI || 'mongodb+srv://alhasnalshrif:MhhWs0xQsYQ50gST@cluster0.fy1zshv.mongodb.net/vitatone',
       options: {
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 5000,
