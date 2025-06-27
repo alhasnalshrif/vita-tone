@@ -60,17 +60,29 @@ router.post('/generate-plan', checkApiKey, async (req, res) => {
     };
 
     // Process food allergies array
-    const allergiesArray = [food_allergies, food_allergies2, other_food_allergies]
-      .filter(allergy => allergy && allergy.trim() !== '')
-      .map(allergy => allergy.trim());
+    let allergiesArray = [];
+    
+    // Handle both array and string formats for food_allergies
+    if (food_allergies) {
+      if (Array.isArray(food_allergies)) {
+        allergiesArray = food_allergies.filter(allergy => allergy && typeof allergy === 'string' && allergy.trim() !== '');
+      } else if (typeof food_allergies === 'string' && food_allergies.trim() !== '') {
+        allergiesArray.push(food_allergies.trim());
+      }
+    }
+    
+    // Add other allergy fields if they exist
+    [food_allergies2, other_food_allergies]
+      .filter(allergy => allergy && typeof allergy === 'string' && allergy.trim() !== '')
+      .forEach(allergy => allergiesArray.push(allergy.trim()));
 
     // Process health conditions array
     const healthConditionsArray = [health_conditions, other_health_conditions]
-      .filter(condition => condition && condition.trim() !== '')
+      .filter(condition => condition && typeof condition === 'string' && condition.trim() !== '')
       .map(condition => condition.trim());
 
     const chronicConditionsArray = [chronic_conditions, other_chronic_conditions]
-      .filter(condition => condition && condition.trim() !== '')
+      .filter(condition => condition && typeof condition === 'string' && condition.trim() !== '')
       .map(condition => condition.trim());
 
     // Find or create user

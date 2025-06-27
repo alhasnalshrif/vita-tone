@@ -443,10 +443,12 @@ router.put('/settings', authenticateToken, [
     body('nutrition.fav_nutrition_type').optional().isString(),
     body('nutrition.food_allergies').optional().isArray(),
     body('nutrition.meals_per_day').optional().isInt({ min: 1, max: 8 }),
+    body('nutrition.nutrition_days').optional().isInt({ min: 1, max: 7 }),
     body('nutrition.diet_preference').optional().isString(),
     body('exercise.fav_workout').optional().isString(),
     body('exercise.workout_goal').optional().isString(),
-    body('exercise.exercise_frequency').optional().isString(),    body('display.language').optional().isString(),
+    body('exercise.exercise_frequency').optional().isString(),
+    body('display.language').optional().isString(),
     body('display.unit_system').optional().isIn(['metric', 'imperial']),
     body('privacy.password').optional().isLength({ min: 6 })
 ], async (req, res) => {
@@ -485,6 +487,7 @@ router.put('/settings', authenticateToken, [
             if (nutrition.fav_nutrition_type) user.fav_nutrition_type = nutrition.fav_nutrition_type;
             if (nutrition.food_allergies) user.food_allergies = nutrition.food_allergies;
             if (nutrition.meals_per_day) user.meals_per_day = nutrition.meals_per_day;
+            if (nutrition.nutrition_days) user.nutrition_days = nutrition.nutrition_days;
             if (nutrition.diet_preference) user.diet_preference = nutrition.diet_preference;
         }
 
@@ -523,6 +526,7 @@ router.put('/settings', authenticateToken, [
                     fav_nutrition_type: user.fav_nutrition_type,
                     food_allergies: user.food_allergies,
                     meals_per_day: user.meals_per_day,
+                    nutrition_days: user.nutrition_days,
                     diet_preference: user.diet_preference
                 },
                 exercise: {
