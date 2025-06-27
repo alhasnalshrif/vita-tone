@@ -3,6 +3,11 @@ const config = require('./config');
 
 // Global connection state for serverless optimization
 let isConnected = false;
+let connectionPromise = null;
+
+// Set global mongoose options
+mongoose.set('bufferCommands', false);
+mongoose.set('strictQuery', false);
 
 class Database {
   constructor() {
@@ -16,70 +21,94 @@ class Database {
       return mongoose.connection;
     }
 
+    // If connection is in progress, wait for it
+    if (connectionPromise) {
+      console.log('⏳ Waiting for existing connection attempt...');
+      return await connectionPromise;
+    }
+
+    // Create new connection promise
+    connectionPromise = this._performConnection();
+
     try {
-      // Disconnect any existing connections first
+      const result = await connectionPromise;
+      connectionPromise = null;
+      return result;
+    } catch (error) {
+      connectionPromise = null;
+      throw error;
+    }
+  }
+
+  async _performConnection() {
+    try {
+      // Disconnect any stale connections
       if (mongoose.connection.readyState !== 0) {
         await mongoose.disconnect();
       }
 
-      // Set mongoose-specific options for newer versions
-      mongoose.set('bufferCommands', false);
-
       // Enhanced connection options for serverless
       const connectionOptions = {
-        ...config.database.mongodb.options,
-        // Serverless-optimized settings
-        maxPoolSize: 5, // Reduced pool size for serverless
-        serverSelectionTimeoutMS: 10000, // Increased timeout
-        socketTimeoutMS: 30000, // Reduced socket timeout
-        connectTimeoutMS: 10000, // Connection timeout
-        maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
-        heartbeatFrequencyMS: 30000, // Heartbeat frequency
+        maxPoolSize: 1, // Single connection for serverless
+        serverSelectionTimeoutMS: 5000, // 5 second timeout
+        socketTimeoutMS: 15000, // 15 second socket timeout
+        connectTimeoutMS: 5000, // 5 second connection timeout
+        maxIdleTimeMS: 10000, // Close after 10s inactivity
+        heartbeatFrequencyMS: 10000, // 10s heartbeat
       };
 
-      // Set mongoose-specific options to prevent buffering
-      mongoose.set('bufferCommands', false);
+      console.log('🔗 Establishing MongoDB connection...');
       
-      // Connect to MongoDB
-      const connection = await mongoose.connect(
-        config.database.mongodb.uri,
-        connectionOptions
-      );
+      // Connect with timeout wrapper
+      const connection = await Promise.race([
+        mongoose.connect(config.database.mongodb.uri, connectionOptions),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('MongoDB connection timeout after 8 seconds')), 8000)
+        )
+      ]);
 
       this.connection = connection;
       isConnected = true;
       
-      console.log('✅ Connected to MongoDB successfully');
+      console.log('✅ MongoDB connected successfully');
       console.log(`📊 Database: ${connection.connection.name}`);
-      console.log(`🌍 Host: ${connection.connection.host}:${connection.connection.port}`);
 
-      // Handle connection events
-      mongoose.connection.on('error', (error) => {
-        console.error('❌ MongoDB connection error:', error);
-        isConnected = false;
-      });
-
-      mongoose.connection.on('disconnected', () => {
-        console.warn('⚠️ MongoDB disconnected');
-        isConnected = false;
-      });
-
-      mongoose.connection.on('reconnected', () => {
-        console.log('🔄 MongoDB reconnected');
-        isConnected = true;
-      });
+      // Set up event handlers (only once)
+      this._setupEventHandlers();
 
       return connection;
     } catch (error) {
-      console.error('❌ Failed to connect to MongoDB:', error);
+      console.error('❌ MongoDB connection failed:', error);
       isConnected = false;
       throw error;
     }
   }
 
+  _setupEventHandlers() {
+    // Remove existing listeners to prevent duplicates
+    mongoose.connection.removeAllListeners('error');
+    mongoose.connection.removeAllListeners('disconnected');
+    mongoose.connection.removeAllListeners('reconnected');
+
+    mongoose.connection.on('error', (error) => {
+      console.error('❌ MongoDB connection error:', error);
+      isConnected = false;
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      console.warn('⚠️ MongoDB disconnected');
+      isConnected = false;
+    });
+
+    mongoose.connection.on('reconnected', () => {
+      console.log('🔄 MongoDB reconnected');
+      isConnected = true;
+    });
+  }
+
   async disconnect() {
     try {
-      if (this.connection || mongoose.connection.readyState !== 0) {
+      if (mongoose.connection.readyState !== 0) {
         await mongoose.disconnect();
         isConnected = false;
         console.log('✅ Disconnected from MongoDB');
@@ -113,7 +142,7 @@ class Database {
   // Ensure connection before database operations
   async ensureConnection() {
     if (!this.isConnected()) {
-      console.log('🔄 Reconnecting to database...');
+      console.log('🔄 Establishing database connection...');
       await this.connect();
     }
     return this.connection;
