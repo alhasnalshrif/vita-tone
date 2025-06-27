@@ -15,6 +15,7 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { validateApiKey } = require('./middleware/validation');
+const { ensureConnection } = require('./middleware/database');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -22,11 +23,22 @@ const PORT = process.env.PORT || 3001;
 // Connect to database
 async function initializeDatabase() {
   try {
+    // In serverless environments, we don't maintain persistent connections
+    // Instead, we'll connect on-demand per request
+    if (process.env.NODE_ENV === 'production' && process.env.VERCEL) {
+      console.log('🚀 Database configured for serverless environment');
+      return;
+    }
+    
+    // For local development, establish connection
     await database.connect();
     console.log('🚀 Database initialization completed');
   } catch (error) {
     console.error('❌ Database initialization failed:', error);
-    process.exit(1);
+    // Don't exit in serverless environments
+    if (!(process.env.NODE_ENV === 'production' && process.env.VERCEL)) {
+      process.exit(1);
+    }
   }
 }
 
@@ -114,11 +126,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Serve static files from the parent directory (where HTML files are)
 app.use(express.static(path.join(__dirname, '..')));
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/user', userRoutes);
+// API Routes with database connection middleware
+app.use('/api/auth', ensureConnection, authRoutes);
+app.use('/api/user', ensureConnection, userRoutes);
 app.use('/api/gemini', aiLimiter, geminiRoutes);
-app.use('/api/health', healthRoutes);
+app.use('/api/health', ensureConnection, healthRoutes);
 
 // Root route - serve index.html
 app.get('/', (req, res) => {
@@ -136,7 +148,8 @@ app.get('/api', (req, res) => {
       user: '/api/user/*',
       gemini: '/api/gemini/*',
       health: '/api/health/*',
-      status: '/api/status'
+      status: '/api/status',
+      dbStatus: '/api/db-status'
     }
   });
 });
@@ -151,6 +164,34 @@ app.get('/api/status', (req, res) => {
     memory: process.memoryUsage(),
     environment: process.env.NODE_ENV || 'development'
   });
+});
+
+// Database health check endpoint
+app.get('/api/db-status', async (req, res) => {
+  try {
+    await database.ensureConnection();
+    const isConnected = database.isConnected();
+    
+    res.json({
+      status: isConnected ? 'OK' : 'DISCONNECTED',
+      database: {
+        connected: isConnected,
+        readyState: require('mongoose').connection.readyState,
+        host: require('mongoose').connection.host,
+        name: require('mongoose').connection.name
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'ERROR',
+      database: {
+        connected: false,
+        error: error.message
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 

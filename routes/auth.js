@@ -45,8 +45,19 @@ router.post('/signup', validateSignup, async (req, res) => {
 
         const { name, email, password } = req.body;
 
-        // Check if user already exists
-        const existingUser = await User.findOne({ email: email.toLowerCase() });
+        // Check if user already exists with timeout handling
+        let existingUser;
+        try {
+            existingUser = await User.findOne({ email: email.toLowerCase() }).maxTimeMS(10000);
+        } catch (dbError) {
+            console.error('Database timeout on user lookup:', dbError);
+            return res.status(503).json({
+                success: false,
+                message: 'Database connection timeout. Please try again.',
+                error: 'SERVICE_UNAVAILABLE'
+            });
+        }
+
         if (existingUser) {
             return res.status(400).json({
                 success: false,
@@ -56,7 +67,9 @@ router.post('/signup', validateSignup, async (req, res) => {
 
         // Hash password
         const saltRounds = process.env.BCRYPT_ROUNDS || 12;
-        const hashedPassword = await bcrypt.hash(password, parseInt(saltRounds));        // Create new user
+        const hashedPassword = await bcrypt.hash(password, parseInt(saltRounds));
+
+        // Create new user with timeout handling
         const newUser = new User({
             full_name: name.trim(),
             email: email.toLowerCase(),
@@ -64,7 +77,16 @@ router.post('/signup', validateSignup, async (req, res) => {
             last_login: new Date()
         });
 
-        await newUser.save();
+        try {
+            await newUser.save({ maxTimeMS: 10000 });
+        } catch (dbError) {
+            console.error('Database timeout on user creation:', dbError);
+            return res.status(503).json({
+                success: false,
+                message: 'Database connection timeout. Please try again.',
+                error: 'SERVICE_UNAVAILABLE'
+            });
+        }
 
         // Generate token
         const token = generateToken(newUser);
@@ -86,10 +108,29 @@ router.post('/signup', validateSignup, async (req, res) => {
 
     } catch (error) {
         console.error('Signup error:', error);
+        
+        // Handle specific MongoDB/Mongoose errors
+        if (error.name === 'MongooseError' || error.name === 'MongoError') {
+            return res.status(503).json({
+                success: false,
+                message: 'Database service temporarily unavailable. Please try again.',
+                error: 'DATABASE_ERROR'
+            });
+        }
+        
+        // Handle validation errors
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation error',
+                error: error.message
+            });
+        }
+        
         res.status(500).json({
             success: false,
             message: 'Internal server error',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: process.env.NODE_ENV === 'development' ? error.message : 'INTERNAL_ERROR'
         });
     }
 });
@@ -109,8 +150,19 @@ router.post('/signin', validateLogin, async (req, res) => {
 
         const { email, password } = req.body;
 
-        // Find user
-        const user = await User.findOne({ email: email.toLowerCase() });
+        // Find user with timeout handling
+        let user;
+        try {
+            user = await User.findOne({ email: email.toLowerCase() }).maxTimeMS(10000);
+        } catch (dbError) {
+            console.error('Database timeout on user lookup:', dbError);
+            return res.status(503).json({
+                success: false,
+                message: 'Database connection timeout. Please try again.',
+                error: 'SERVICE_UNAVAILABLE'
+            });
+        }
+
         if (!user) {
             return res.status(401).json({
                 success: false,
@@ -127,9 +179,14 @@ router.post('/signin', validateLogin, async (req, res) => {
             });
         }
 
-        // Update last login
+        // Update last login with timeout handling
         user.last_login = new Date();
-        await user.save();
+        try {
+            await user.save({ maxTimeMS: 10000 });
+        } catch (dbError) {
+            console.warn('Failed to update last login time:', dbError);
+            // Don't fail the login for this non-critical operation
+        }
 
         // Generate token
         const token = generateToken(user);
@@ -152,10 +209,20 @@ router.post('/signin', validateLogin, async (req, res) => {
 
     } catch (error) {
         console.error('Signin error:', error);
+        
+        // Handle specific MongoDB/Mongoose errors
+        if (error.name === 'MongooseError' || error.name === 'MongoError') {
+            return res.status(503).json({
+                success: false,
+                message: 'Database service temporarily unavailable. Please try again.',
+                error: 'DATABASE_ERROR'
+            });
+        }
+        
         res.status(500).json({
             success: false,
             message: 'Internal server error',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: process.env.NODE_ENV === 'development' ? error.message : 'INTERNAL_ERROR'
         });
     }
 });

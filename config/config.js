@@ -4,9 +4,12 @@ module.exports = {  // Database configuration
     mongodb: {
       uri: process.env.MONGODB_URI || 'mongodb+srv://alhasnalshrif:MhhWs0xQsYQ50gST@cluster0.fy1zshv.mongodb.net/vitatone',
       options: {
-        maxPoolSize: 10,
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 45000
+        maxPoolSize: process.env.NODE_ENV === 'production' ? 5 : 10,
+        serverSelectionTimeoutMS: 10000, // 10 seconds
+        socketTimeoutMS: 30000, // 30 seconds
+        connectTimeoutMS: 10000, // 10 seconds
+        maxIdleTimeMS: 30000, // Close connections after 30s inactivity
+        heartbeatFrequencyMS: 30000, // 30 seconds
       }
     }
   },
