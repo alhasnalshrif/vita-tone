@@ -28,12 +28,18 @@ module.exports = {  // Database configuration
 
   // CORS configuration
   cors: {
-    origins: process.env.CORS_ORIGINS ? 
-      process.env.CORS_ORIGINS.split(',') : [
-        'http://localhost:3000',
-        'http://127.0.0.1:5500',
-        'http://localhost:5500'
-      ],
+    origins: [
+      "*",
+      'http://localhost:3000',
+      'http://127.0.0.1:5500',
+      'http://localhost:5500',
+      'http://localhost:8080',
+      'http://localhost:8000',
+      'http://127.0.0.1:8080',
+      'http://127.0.0.1:8000',
+      'http://127.0.0.1:3000',
+      'null' // Allow null origin for file:// protocol
+    ],
     credentials: true,
     optionsSuccessStatus: 200
   },

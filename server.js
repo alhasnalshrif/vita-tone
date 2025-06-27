@@ -45,19 +45,7 @@ app.use(helmet({
   },
 }));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: {
-    error: 'Too many requests from this IP',
-    message: 'Please try again later.',
-    retryAfter: '15 minutes'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use(limiter);
+
 
 // Stricter rate limiting for AI endpoints
 const aiLimiter = rateLimit({
@@ -82,7 +70,8 @@ const corsOptions = {
     if (origin && origin.startsWith('file://')) return callback(null, true);
 
     // Allow common development origins
-    const allowedOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [
+    const allowedOrigins =  [
+      "*",
       'http://localhost:3000',
       'http://127.0.0.1:5500',
       'http://localhost:5500',
@@ -164,53 +153,7 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// API documentation endpoint
-app.get('/api/docs', (req, res) => {
-  res.json({
-    title: 'Vita Tone API Documentation',
-    version: '1.0.0', endpoints: {
-      'POST /api/auth/signup': 'User registration',
-      'POST /api/auth/signin': 'User login',
-      'GET /api/auth/profile': 'Get user profile (requires token)',
-      'POST /api/auth/logout': 'User logout',
-      'GET /api/user/profile': 'Get user detailed profile',
-      'POST /api/user/profile': 'Save/update user profile',
-      'GET /api/user/daily': 'Get daily tracking data',
-      'POST /api/user/daily': 'Save daily tracking entry',
-      'GET /api/user/stats': 'Get user statistics and progress',
-      'POST /api/gemini/generate-plan': 'Generate personalized health plan',
-      'POST /api/gemini/nutrition-advice': 'Get nutrition advice',
-      'POST /api/gemini/workout-routine': 'Generate workout routines',
-      'POST /api/gemini/chat': 'General AI chat',
-      'POST /api/health/calculate-bmi': 'Calculate BMI',
-      'POST /api/health/calculate-calories': 'Calculate daily calorie needs',
-      'POST /api/health/save-profile': 'Save user profile',
-      'GET /api/health/tips/:category': 'Get health tips by category',
-      'GET /api/status': 'Check API server status'
-    }, examples: {
-      signup: {
-        method: 'POST',
-        url: '/api/auth/signup',
-        body: { name: 'John Doe', email: 'john@example.com', password: 'password123' }
-      },
-      signin: {
-        method: 'POST',
-        url: '/api/auth/signin',
-        body: { email: 'john@example.com', password: 'password123' }
-      },
-      chat: {
-        method: 'POST',
-        url: '/api/gemini/chat',
-        body: { message: 'Explain how AI works in a few words' }
-      },
-      bmi: {
-        method: 'POST',
-        url: '/api/health/calculate-bmi',
-        body: { weight: 70, height: 175 }
-      }
-    }
-  });
-});
+
 
 // Error handling middleware
 app.use(notFoundHandler);
