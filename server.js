@@ -84,6 +84,7 @@ const corsOptions = {
     // Allow common development origins
     const allowedOrigins =  [
       "*",
+      'https://vita-app.online',
       'http://localhost:3000',
       'http://127.0.0.1:5500',
       'http://localhost:5500',
